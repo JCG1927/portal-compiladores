@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Portal de Compiladores</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,700&display=swap" rel="stylesheet">
+<style>
+/* Plan: papel técnico frío, tinta azul petróleo, acento naranja de compilación.
+   Layout: barra superior con 8 "páginas" enrutadas por hash; contenido en columna de lectura con diagramas anchos. */
+:root{
+  --paper:#f5f7f6; --card:#ffffff; --ink:#13232b; --muted:#53666f;
+  --line:#d5dee0; --teal:#0e5a6b; --accent:#d9541e; --code:#eaf0ef;
+  --display:'Source Serif 4',Georgia,serif; --body:'IBM Plex Sans',system-ui,sans-serif; --mono:'IBM Plex Mono',ui-monospace,Menlo,monospace;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --paper:#0e171b; --card:#15222a; --ink:#e6eef0; --muted:#98adb5;
+    --line:#2a3d46; --teal:#5cc0d4; --accent:#ff8a52; --code:#1b2c35; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --paper:#0e171b; --card:#15222a; --ink:#e6eef0; --muted:#98adb5;
+  --line:#2a3d46; --teal:#5cc0d4; --accent:#ff8a52; --code:#1b2c35; color-scheme:dark;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--paper);color:var(--ink);font:16px/1.65 var(--body)}
+a{color:var(--teal)}
+a:focus-visible,button:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+header.top{position:sticky;top:0;z-index:5;background:var(--ink);color:var(--paper)}
+header.top .in{max-width:1080px;margin:0 auto;padding:10px 16px;display:flex;flex-wrap:wrap;gap:6px 14px;align-items:center}
+.brand{font:700 18px var(--display);margin-right:auto;color:#fff;text-decoration:none}
+:root:not([data-theme="dark"]) header.top{background:#13232b}
+nav{display:flex;flex-wrap:wrap;gap:2px 4px}
+nav a{color:#cfe0e4;text-decoration:none;padding:5px 9px;border-radius:6px;font-size:14px}
+nav a:hover{background:#ffffff1f}
+nav a[aria-current="page"]{background:var(--accent);color:#fff}
+main{max-width:1080px;margin:0 auto;padding:32px 16px 64px}
+.page{display:none}
+.page.active{display:block}
+h1,h2,h3{font-family:var(--display);line-height:1.2;text-wrap:balance}
+h1{font-size:clamp(30px,5vw,46px);margin:0 0 8px}
+h2{font-size:26px;margin:36px 0 10px}
+h3{font-size:19px;margin:24px 0 6px}
+p,li{max-width:68ch}
+.lead{font-size:18px;color:var(--muted);max-width:62ch}
+.kicker{font:500 13px var(--mono);color:var(--accent);letter-spacing:.04em;text-transform:uppercase}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:18px 20px}
+.grid{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(240px,1fr))}
+.cover{display:grid;gap:28px;grid-template-columns:minmax(0,1.3fr) minmax(0,1fr);align-items:start}
+@media(max-width:760px){.cover{grid-template-columns:1fr}}
+.cover .meta{border-left:4px solid var(--accent);padding-left:16px;margin:18px 0;color:var(--muted)}
+.cover .meta b{color:var(--ink)}
+.team{list-style:none;margin:0;padding:0;counter-reset:m}
+.team li{counter-increment:m;display:flex;gap:12px;align-items:baseline;padding:10px 0;border-bottom:1px solid var(--line);font-weight:500}
+.team li::before{content:counter(m,decimal-leading-zero);font:500 13px var(--mono);color:var(--accent)}
+.snippet{font:14px/1.6 var(--mono);background:var(--code);border:1px solid var(--line);border-radius:8px;padding:14px 16px;overflow-x:auto;white-space:pre;margin:10px 0}
+.snippet .c{color:var(--muted)}
+.scroll{overflow-x:auto}
+table{border-collapse:collapse;width:100%;min-width:560px;font-size:15px}
+th,td{border-bottom:1px solid var(--line);padding:9px 10px;text-align:left;vertical-align:top}
+th{font:600 13px var(--mono);text-transform:uppercase;letter-spacing:.03em;color:var(--muted)}
+.flow{display:flex;flex-wrap:wrap;gap:8px;align-items:stretch;margin:14px 0}
+.flow .step{flex:1 1 130px;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--teal);border-radius:8px;padding:10px 12px;font-size:14px}
+.flow .step.mid{border-top-color:var(--accent)}
+.flow .step.back{border-top-color:var(--ink)}
+.flow .step b{display:block;font-family:var(--display);font-size:16px}
+.flow .step small{color:var(--muted)}
+.legend{font-size:14px;color:var(--muted)}
+.tag{display:inline-block;font:500 12px var(--mono);padding:2px 8px;border-radius:99px;background:var(--code);border:1px solid var(--line)}
+.phases{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.phases li{max-width:none;display:grid;grid-template-columns:44px 1fr;gap:14px;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.phases .n{font:700 28px var(--display);color:var(--accent)}
+.phases h3{margin:0 0 4px}
+.phases p{margin:4px 0}
+textarea,input[type=text]{width:100%;font:15px var(--mono);background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px}
+button{font:600 15px var(--body);background:var(--accent);color:#fff;border:0;border-radius:8px;padding:10px 16px;cursor:pointer}
+button.alt{background:var(--code);color:var(--ink);border:1px solid var(--line)}
+.lab{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));margin-top:14px}
+.lab h3{margin-top:0}
+.err{color:#b3261e;font-weight:600}
+@media(prefers-color-scheme:dark){:root:not([data-theme="light"]) .err{color:#ff9a8f}}
+:root[data-theme="dark"] .err{color:#ff9a8f}
+dl.gloss{display:grid;grid-template-columns:minmax(120px,200px) 1fr;gap:8px 18px;margin:0}
+dl.gloss dt{font-weight:600}
+dl.gloss dd{margin:0;max-width:62ch}
+@media(max-width:560px){dl.gloss{grid-template-columns:1fr}dl.gloss dd{margin-bottom:8px}}
+.refs{padding-left:20px}
+.refs li{margin-bottom:10px;overflow-wrap:anywhere}
+footer{border-top:1px solid var(--line);color:var(--muted);font-size:14px;text-align:center;padding:20px 16px}
+@media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}}
+</style>
+</head>
+<body>
+<header class="top">
+  <div class="in">
+    <a class="brand" href="#portada">Portal de Compiladores</a>
+    <nav aria-label="Páginas del portal">
+      <a href="#portada">Portada</a>
+      <a href="#definicion">Definición</a>
+      <a href="#estructura">Estructura</a>
+      <a href="#codigo">Código intermedio y final</a>
+      <a href="#fases">Fases</a>
+      <a href="#compiladores">Compiladores actuales</a>
+      <a href="#laboratorio">Laboratorio</a>
+      <a href="#referencias">Referencias</a>
+    </nav>
+  </div>
+</header>
+
+<main>
+
+<!-- 1. PORTADA -->
+<section id="portada" class="page active" aria-labelledby="t-portada">
+  <div class="cover">
+    <div>
+      <p class="kicker">Universidad Iberoamericana (UNIBE) · Escuela de ITIC</p>
+      <h1 id="t-portada">Teoría de Compiladores</h1>
+      <p class="lead">Portal de investigación sobre qué es un compilador, cómo está construido, cómo traduce un programa y cuáles se usan hoy.</p>
+      <div class="meta">
+        <div><b>Asignatura:</b> TI3310-02-2027-1 · Teoría de Autómatas y Compiladores</div>
+        <div><b>Actividad:</b> 12 · Creación del Portal Web (trabajo grupal)</div>
+        <div><b>Profesor:</b> Santiago Ramírez Pérez</div>
+        <div><b>Fecha:</b> noviembre de 2026</div>
+      </div>
+      <p><a href="#definicion">Empezar por la definición de compilador</a></p>
+    </div>
+    <aside class="card" aria-labelledby="t-equipo">
+      <h2 id="t-equipo" style="margin-top:0;font-size:20px">Participantes</h2>
+      <ol class="team">
+        <li>Elmer Manuel Gonzalez Otaño</li>
+        <li>Jose Carlos Guerrero De la Cruz</li>
+        <li>Jose Emilio Rodriguez Encarnacion</li>
+        <li>Leonel Antonio Bido Del Orbe</li>
+        <li>Luis Angel Martinez Delgado</li>
+      </ol>
+    </aside>
+  </div>
+  <h2>Contenido del portal</h2>
+  <div class="grid">
+    <a class="card" href="#definicion"><b>Definición</b><br><span class="legend">Qué es un compilador y su vínculo con autómatas y lenguajes formales.</span></a>
+    <a class="card" href="#estructura"><b>Estructura</b><br><span class="legend">Front end, middle end, back end, tabla de símbolos y manejo de errores.</span></a>
+    <a class="card" href="#codigo"><b>Código intermedio y final</b><br><span class="legend">Representaciones intermedias y generación de código objeto.</span></a>
+    <a class="card" href="#fases"><b>Fases de la compilación</b><br><span class="legend">Del texto fuente al ejecutable, con un ejemplo paso a paso.</span></a>
+    <a class="card" href="#compiladores"><b>Compiladores actuales</b><br><span class="legend">GCC, LLVM/Clang, MSVC, javac, rustc, Go y más.</span></a>
+    <a class="card" href="#laboratorio"><b>Laboratorio</b><br><span class="legend">Mini compilador interactivo y glosario.</span></a>
+  </div>
+</section>
+
+<!-- 2. DEFINICIÓN -->
+<section id="definicion" class="page" aria-labelledby="t-def">
+  <p class="kicker">Página 2</p>
+  <h1 id="t-def">¿Qué es un compilador?</h1>
+  <p class="lead">Un compilador es un programa que traduce un programa escrito en un lenguaje fuente a un programa equivalente en un lenguaje destino, normalmente código máquina o una forma intermedia, y que informa los errores que encuentra en el camino.</p>
+
+  <h2>Compilador, intérprete y modelos híbridos</h2>
+  <div class="grid">
+    <div class="card"><h3 style="margin-top:0">Compilador (AOT)</h3><p>Traduce todo el programa antes de ejecutarlo. El resultado se ejecuta sin volver a analizar el fuente. Ejemplos: GCC, Clang, rustc, el compilador de Go.</p></div>
+    <div class="card"><h3 style="margin-top:0">Intérprete</h3><p>Analiza y ejecuta el programa instrucción por instrucción, sin producir un ejecutable independiente. Ejemplo clásico: shells de comandos.</p></div>
+    <div class="card"><h3 style="margin-top:0">Híbridos y JIT</h3><p>Compilan a bytecode y luego interpretan o compilan en tiempo de ejecución las partes calientes. Ejemplos: la JVM con Java, .NET con C#, CPython (bytecode).</p></div>
+  </div>
+
+  <h2>Vínculo con la Teoría de Autómatas y Lenguajes Formales</h2>
+  <p>La teoría de compiladores es una aplicación directa de los lenguajes formales. Un lenguaje de programación se define con una gramática, y cada fase del front end usa el modelo de cómputo que le corresponde en la jerarquía de Chomsky.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Fase</th><th>Lenguaje</th><th>Gramática</th><th>Autómata</th><th>Herramientas</th></tr></thead>
+    <tbody>
+      <tr><td>Análisis léxico</td><td>Regular (Tipo 3)</td><td>Expresiones regulares / gramática regular</td><td>Autómata finito (AFD / AFN)</td><td>lex, flex, JFlex</td></tr>
+      <tr><td>Análisis sintáctico</td><td>Libre de contexto (Tipo 2)</td><td>Gramática libre de contexto (GLC)</td><td>Autómata de pila</td><td>yacc, Bison, ANTLR</td></tr>
+      <tr><td>Análisis semántico</td><td>Sensible al contexto (Tipo 1), en la práctica aproximado</td><td>Gramáticas de atributos y reglas de tipos</td><td>Se implementa con tabla de símbolos, no con un autómata puro</td><td>Recorridos del AST</td></tr>
+      <tr><td>Cómputo en general</td><td>Recursivamente enumerable (Tipo 0)</td><td>Gramática sin restricciones</td><td>Máquina de Turing</td><td>Base teórica de lo computable</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Cómo se ve en la práctica</h3>
+  <p>Un identificador de C se describe con la expresión regular <code>[A-Za-z_][A-Za-z0-9_]*</code>, que un autómata finito reconoce. En cambio, comprobar que los paréntesis de <code>((a+b)*c)</code> estén balanceados exige memoria de pila, algo que un autómata finito no tiene, y por eso el parser usa gramáticas libres de contexto.</p>
+  <div class="snippet">expr   → expr '+' term | term
+term   → term '*' factor | factor
+factor → '(' expr ')' | NUM | ID</div>
+  <p>Esta gramática también fija la precedencia: <code>*</code> se agrupa antes que <code>+</code> porque está más abajo en la jerarquía de reglas.</p>
+</section>
+
+<!-- 3. ESTRUCTURA -->
+<section id="estructura" class="page" aria-labelledby="t-est">
+  <p class="kicker">Página 3</p>
+  <h1 id="t-est">Estructura de un compilador</h1>
+  <p class="lead">Un compilador moderno se divide en tres bloques conectados por una representación intermedia. Esa división permite reutilizar piezas entre lenguajes y arquitecturas.</p>
+
+  <div class="flow" role="img" aria-label="Diagrama: código fuente, front end, representación intermedia, middle end, back end, código objeto">
+    <div class="step"><b>Código fuente</b><small>texto del programa</small></div>
+    <div class="step"><b>Front end</b><small>léxico, sintaxis, semántica</small></div>
+    <div class="step mid"><b>Representación intermedia</b><small>IR independiente de la máquina</small></div>
+    <div class="step mid"><b>Middle end</b><small>optimización</small></div>
+    <div class="step back"><b>Back end</b><small>selección de instrucciones, registros, emisión</small></div>
+    <div class="step back"><b>Código objeto</b><small>ensamblador o binario</small></div>
+  </div>
+  <p class="legend">Debajo de todas las etapas trabajan dos componentes compartidos: la tabla de símbolos y el manejador de errores.</p>
+
+  <div class="grid">
+    <div class="card"><h3 style="margin-top:0">Front end (análisis)</h3><p>Depende del lenguaje fuente. Lee el programa, verifica que sea válido y construye una representación estructurada (AST) y una primera IR.</p></div>
+    <div class="card"><h3 style="margin-top:0">Middle end (optimización)</h3><p>Transforma la IR para que el programa sea más rápido o más pequeño sin cambiar su resultado. No depende ni del lenguaje ni de la máquina.</p></div>
+    <div class="card"><h3 style="margin-top:0">Back end (síntesis)</h3><p>Depende de la arquitectura destino. Elige instrucciones, asigna registros, ordena instrucciones y emite el código objeto.</p></div>
+  </div>
+
+  <h2>Componentes transversales</h2>
+  <dl class="gloss">
+    <dt>Tabla de símbolos</dt><dd>Estructura de datos donde se guarda cada identificador con su tipo, ámbito y posición de memoria. La consultan casi todas las fases.</dd>
+    <dt>Manejador de errores</dt><dd>Detecta, reporta y se recupera de errores léxicos, sintácticos y semánticos para seguir analizando y mostrar varios mensajes en una sola pasada.</dd>
+    <dt>Preprocesador</dt><dd>Etapa previa en algunos lenguajes (por ejemplo C y C++) que expande macros e incluye archivos antes del análisis.</dd>
+    <dt>Ensamblador y enlazador</dt><dd>Etapas posteriores que convierten el ensamblador en un objeto binario y unen objetos y bibliotecas en un ejecutable.</dd>
+  </dl>
+
+  <h2>Por qué se usa una representación intermedia</h2>
+  <p>Sin IR, soportar <b>N</b> lenguajes en <b>M</b> arquitecturas exige <b>N × M</b> compiladores. Con una IR común basta con <b>N</b> front ends y <b>M</b> back ends. Este es el principio de LLVM, que sirve de base a Clang, rustc y Swift, entre otros.</p>
+  <h3>Un paso o varios pasos</h3>
+  <p>Un compilador de una sola pasada genera código mientras lee el fuente, y es rápido pero limita las optimizaciones. Un compilador de varias pasadas recorre el programa o su IR más de una vez, y es el modelo habitual hoy.</p>
+</section>
+
+<!-- 4. CÓDIGO INTERMEDIO Y FINAL -->
+<section id="codigo" class="page" aria-labelledby="t-cod">
+  <p class="kicker">Página 4</p>
+  <h1 id="t-cod">Generación de código intermedio y final</h1>
+  <p class="lead">Después de validar el programa, el compilador lo traduce primero a una forma intermedia y recién al final a instrucciones de una máquina concreta.</p>
+
+  <h2>Código intermedio</h2>
+  <p>Es una representación del programa más simple que el lenguaje fuente y más abstracta que el código máquina. Su objetivo es facilitar la optimización y la portabilidad.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Forma</th><th>Descripción</th><th>Dónde se usa</th></tr></thead>
+    <tbody>
+      <tr><td>Árbol sintáctico abstracto (AST)</td><td>Árbol que conserva la estructura del programa sin los detalles de la gramática.</td><td>Front end de casi todos los compiladores</td></tr>
+      <tr><td>Código de tres direcciones</td><td>Instrucciones con a lo sumo un operador y tres operandos: <code>t1 = b * c</code>. Se guarda como cuádruplas o triplas.</td><td>Texto de compiladores, muchos diseños propios</td></tr>
+      <tr><td>Forma SSA</td><td>Cada variable se asigna una sola vez; las uniones usan funciones φ. Facilita muchas optimizaciones.</td><td>LLVM IR, GCC (GIMPLE), HotSpot</td></tr>
+      <tr><td>Bytecode</td><td>Conjunto de instrucciones para una máquina virtual de pila o de registros.</td><td>JVM, .NET (CIL), CPython</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h3>Ejemplo: <code>x = a + b * c;</code></h3>
+  <div class="snippet"><span class="c">// código de tres direcciones</span>
+t1 = b * c
+t2 = a + t1
+x  = t2</div>
+  <p>La multiplicación se evalúa primero porque el parser ya resolvió la precedencia; el código intermedio solo conserva el orden de cálculo.</p>
+
+  <h2>Optimización sobre el código intermedio</h2>
+  <ul>
+    <li><b>Plegado de constantes:</b> <code>x = 3 * 2</code> pasa a <code>x = 6</code>.</li>
+    <li><b>Eliminación de código muerto:</b> se borran instrucciones cuyo resultado nunca se usa.</li>
+    <li><b>Eliminación de subexpresiones comunes:</b> si <code>a*b</code> se calcula dos veces, se reutiliza el primer resultado.</li>
+    <li><b>Movimiento de código fuera de bucles:</b> lo que no cambia en cada vuelta se calcula una sola vez.</li>
+    <li><b>Inlining:</b> se reemplaza una llamada por el cuerpo de la función.</li>
+  </ul>
+
+  <h2>Generación de código final</h2>
+  <p>Es la tarea del back end. Convierte la IR optimizada en código del procesador destino y resuelve los detalles de la máquina:</p>
+  <ol>
+    <li><b>Selección de instrucciones:</b> elegir las instrucciones del procesador que implementan cada operación de la IR.</li>
+    <li><b>Asignación de registros:</b> decidir qué valores viven en registros y cuáles se derraman a memoria.</li>
+    <li><b>Planificación de instrucciones:</b> ordenarlas para aprovechar el pipeline del procesador.</li>
+    <li><b>Emisión:</b> producir ensamblador o directamente un archivo objeto.</li>
+  </ol>
+  <div class="snippet"><span class="c">; mismo ejemplo, ensamblador genérico (didáctico)</span>
+MOV  R1, b
+MUL  R1, c
+ADD  R1, a
+MOV  x, R1</div>
+  <p>El resultado se enlaza con otras unidades y bibliotecas para formar el ejecutable. Puede probar el recorrido completo con su propia expresión en el <a href="#laboratorio">laboratorio</a>.</p>
+</section>
+
+<!-- 5. FASES -->
+<section id="fases" class="page" aria-labelledby="t-fas">
+  <p class="kicker">Página 5</p>
+  <h1 id="t-fas">Fases del proceso de compilación</h1>
+  <p class="lead">Cada fase recibe la salida de la anterior. Se agrupan en análisis (front end) y síntesis (back end). La instrucción de ejemplo es <code>x = a + 5 * b;</code></p>
+
+  <ol class="phases">
+    <li><span class="n">1</span><div><h3>Análisis léxico <span class="tag">autómata finito</span></h3>
+      <p>El analizador léxico (scanner) agrupa los caracteres en tokens y descarta espacios y comentarios.</p>
+      <div class="snippet">ID(x)  ASIGNA  ID(a)  MAS  NUM(5)  POR  ID(b)  PUNTOYCOMA</div></div></li>
+    <li><span class="n">2</span><div><h3>Análisis sintáctico <span class="tag">autómata de pila</span></h3>
+      <p>El parser comprueba que los tokens cumplan la gramática y construye el árbol sintáctico.</p>
+      <div class="snippet">=
+├─ x
+└─ +
+   ├─ a
+   └─ *
+      ├─ 5
+      └─ b</div></div></li>
+    <li><span class="n">3</span><div><h3>Análisis semántico</h3>
+      <p>Verifica el significado: variables declaradas, tipos compatibles, número de argumentos. Anota el árbol con tipos y llena la tabla de símbolos. Por ejemplo, <code>"hola" + 3</code> se rechaza aquí.</p></div></li>
+    <li><span class="n">4</span><div><h3>Generación de código intermedio</h3>
+      <p>Traduce el árbol anotado a una IR independiente de la máquina.</p>
+      <div class="snippet">t1 = 5 * b
+t2 = a + t1
+x  = t2</div></div></li>
+    <li><span class="n">5</span><div><h3>Optimización</h3>
+      <p>Mejora la IR sin alterar su resultado: plegado de constantes, eliminación de código muerto, reducción de fuerza, entre otras.</p></div></li>
+    <li><span class="n">6</span><div><h3>Generación de código final</h3>
+      <p>Selecciona instrucciones, asigna registros y emite ensamblador u objeto para la arquitectura destino. Luego el enlazador produce el ejecutable.</p></div></li>
+  </ol>
+  <p class="legend">Fases 1 a 3 (más la IR inicial): análisis. Fases 5 y 6: síntesis. La tabla de símbolos y el manejo de errores participan en todas.</p>
+</section>
+
+<!-- 6. COMPILADORES ACTUALES -->
+<section id="compiladores" class="page" aria-labelledby="t-comp">
+  <p class="kicker">Página 6</p>
+  <h1 id="t-comp">Principales compiladores en la actualidad</h1>
+  <p class="lead">Estos son los compiladores más influyentes en el desarrollo de software. Las versiones corresponden a las últimas publicaciones que encontramos al preparar el trabajo.</p>
+  <div class="scroll">
+  <table>
+    <thead><tr><th>Compilador</th><th>Lenguajes</th><th>Notas</th></tr></thead>
+    <tbody>
+      <tr><td><b>GCC</b> (GNU Compiler Collection)</td><td>C, C++, Fortran, Ada, Go, entre otros</td><td>Proyecto GNU, base de Linux. La serie 16 inició con GCC 16.1 el 30 de abril de 2026.</td></tr>
+      <tr><td><b>LLVM / Clang</b></td><td>C, C++, Objective-C (Clang); infraestructura para otros</td><td>Arquitectura modular con IR en SSA. LLVM/Clang 23.1 salió el 25 de agosto de 2026.</td></tr>
+      <tr><td><b>MSVC</b></td><td>C, C++</td><td>Compilador de Microsoft incluido en Visual Studio, para Windows.</td></tr>
+      <tr><td><b>javac</b> (OpenJDK)</td><td>Java</td><td>Compila a bytecode de la JVM; el JIT de HotSpot lo optimiza al ejecutar.</td></tr>
+      <tr><td><b>rustc</b></td><td>Rust</td><td>Usa LLVM como back end; su verificador de préstamos comprueba la seguridad de memoria al compilar.</td></tr>
+      <tr><td><b>Go (gc)</b></td><td>Go</td><td>Compilación muy rápida a binarios estáticos.</td></tr>
+      <tr><td><b>Roslyn</b></td><td>C#, Visual Basic</td><td>Compilador de .NET de código abierto que expone el análisis como API; genera CIL.</td></tr>
+      <tr><td><b>Swift (swiftc)</b></td><td>Swift</td><td>Basado en LLVM, con su propia IR intermedia (SIL).</td></tr>
+      <tr><td><b>CPython</b></td><td>Python</td><td>Compila el fuente a bytecode que luego interpreta su máquina virtual.</td></tr>
+    </tbody>
+  </table>
+  </div>
+
+  <h2>Observación para el trabajo</h2>
+  <p>LLVM aparece detrás de varios lenguajes modernos (Clang, rustc, swiftc). Es el ejemplo más claro de la ventaja de una IR común descrita en la página de <a href="#estructura">estructura</a>.</p>
+  <p>Para ver cómo se compila un fragmento a ensamblador con distintos compiladores se puede usar <a href="https://godbolt.org/" target="_blank" rel="noopener">Compiler Explorer</a>.</p>
+</section>
+
+<!-- 7. LABORATORIO / EXTRAS -->
+<section id="laboratorio" class="page" aria-labelledby="t-lab">
+  <p class="kicker">Página 7 · Elementos de interés</p>
+  <h1 id="t-lab">Laboratorio: un mini compilador</h1>
+  <p class="lead">Escriba una asignación aritmética y vea los tokens, el código de tres direcciones y un ensamblador didáctico. Es una versión mínima de las fases 1, 2, 4 y 6.</p>
+  <div class="card">
+    <label for="src"><b>Expresión</b> (admite números, identificadores, + - * / y paréntesis)</label>
+    <input id="src" type="text" value="x = a + 5 * (b - c);" spellcheck="false" autocomplete="off">
+    <p style="margin:10px 0 0;display:flex;gap:8px;flex-wrap:wrap">
+      <button id="go" type="button">Compilar</button>
+      <button id="ex1" class="alt" type="button">y = (p + q) * (p - q);</button>
+      <button id="ex2" class="alt" type="button">z = 3 * x + 2 * y - 7;</button>
+      <button id="ex3" class="alt" type="button">w = a + * 4;</button>
+    </p>
+  </div>
+  <div id="labout" class="lab" aria-live="polite"></div>
+
+  <h2>Glosario</h2>
+  <dl class="gloss">
+    <dt>Token</dt><dd>Unidad léxica mínima: palabra clave, identificador, número, operador.</dd>
+    <dt>Lexema</dt><dd>Texto concreto del fuente que corresponde a un token.</dd>
+    <dt>AST</dt><dd>Árbol sintáctico abstracto, resumen de la estructura del programa.</dd>
+    <dt>IR</dt><dd>Representación intermedia entre el front end y el back end.</dd>
+    <dt>SSA</dt><dd>Forma en que cada variable se asigna una sola vez.</dd>
+    <dt>AOT / JIT</dt><dd>Compilación antes de ejecutar (ahead of time) o durante la ejecución (just in time).</dd>
+    <dt>Bytecode</dt><dd>Código de bajo nivel para una máquina virtual.</dd>
+    <dt>Generador de analizadores</dt><dd>Herramienta que produce el scanner o el parser a partir de una especificación: flex, Bison, ANTLR.</dd>
+  </dl>
+
+  <h2>Conclusiones</h2>
+  <ul>
+    <li>Los compiladores son una aplicación directa de la teoría de autómatas y lenguajes formales: autómatas finitos para el léxico, gramáticas libres de contexto para la sintaxis.</li>
+    <li>Separar front end, middle end y back end con una IR común reduce el trabajo de soportar nuevos lenguajes y arquitecturas.</li>
+    <li>Las optimizaciones se hacen sobre la IR, y por eso la calidad de la IR define buena parte de la calidad del compilador.</li>
+  </ul>
+</section>
+
+<!-- 8. REFERENCIAS -->
+<section id="referencias" class="page" aria-labelledby="t-ref">
+  <p class="kicker">Página 8</p>
+  <h1 id="t-ref">Referencias</h1>
+  <p class="lead">Recursos consultados para elaborar este portal.</p>
+  <ol class="refs">
+    <li>Wikipedia. <i>Compilador</i>. <a href="https://es.wikipedia.org/wiki/Compilador" target="_blank" rel="noopener">https://es.wikipedia.org/wiki/Compilador</a></li>
+    <li>Wikipedia. <i>Jerarquía de Chomsky</i>. <a href="https://es.wikipedia.org/wiki/Jerarqu%C3%ADa_de_Chomsky" target="_blank" rel="noopener">https://es.wikipedia.org/wiki/Jerarqu%C3%ADa_de_Chomsky</a></li>
+    <li>Wikipedia. <i>Compilers: Principles, Techniques, and Tools</i> (Aho, Lam, Sethi y Ullman). <a href="https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools" target="_blank" rel="noopener">https://en.wikipedia.org/wiki/Compilers:_Principles,_Techniques,_and_Tools</a></li>
+    <li>Universidad Nacional del Centro (Argentina). <i>Diseño de Compiladores I: estructura general de un compilador</i>. <a href="https://users.exa.unicen.edu.ar/catedras/compila1/index_archivos/Introduccion.pdf" target="_blank" rel="noopener">https://users.exa.unicen.edu.ar/catedras/compila1/index_archivos/Introduccion.pdf</a></li>
+    <li>TecNM. <i>Reporte final de Lenguajes y Autómatas II</i>. <a href="https://rinacional.tecnm.mx/bitstream/TecNM/7204/2/REPORTE%20FINAL%20LENGUAJES%20Y%20AUTOMATAS%20II.pdf" target="_blank" rel="noopener">https://rinacional.tecnm.mx/bitstream/TecNM/7204/2/REPORTE%20FINAL%20LENGUAJES%20Y%20AUTOMATAS%20II.pdf</a></li>
+    <li>Larabel, M. (25 de agosto de 2026). <i>LLVM/Clang 23.1 Released</i>. Phoronix. <a href="https://www.phoronix.com/news/LLVM-23.1-Released" target="_blank" rel="noopener">https://www.phoronix.com/news/LLVM-23.1-Released</a></li>
+    <li>Linux Adictos. <i>GCC 16.1: the silent leap that redefines the GNU compiler</i>. <a href="https://en.linuxadictos.com/gcc-16.1-The-silent-leap-that-redefines-the-gnu-compiler.html" target="_blank" rel="noopener">https://en.linuxadictos.com/gcc-16.1-The-silent-leap-that-redefines-the-gnu-compiler.html</a></li>
+    <li>Proyecto GNU. <i>GCC, the GNU Compiler Collection</i>. <a href="https://gcc.gnu.org/" target="_blank" rel="noopener">https://gcc.gnu.org/</a></li>
+    <li>Proyecto LLVM. <i>The LLVM Compiler Infrastructure</i>. <a href="https://llvm.org/" target="_blank" rel="noopener">https://llvm.org/</a></li>
+    <li>Proyecto LLVM. <i>Clang: a C language family frontend for LLVM</i>. <a href="https://clang.llvm.org/" target="_blank" rel="noopener">https://clang.llvm.org/</a></li>
+    <li>Rust Project. <i>Rust Programming Language</i>. <a href="https://www.rust-lang.org/" target="_blank" rel="noopener">https://www.rust-lang.org/</a></li>
+    <li>Go Project. <i>The Go Programming Language</i>. <a href="https://go.dev/" target="_blank" rel="noopener">https://go.dev/</a></li>
+    <li>OpenJDK. <i>OpenJDK</i>. <a href="https://openjdk.org/" target="_blank" rel="noopener">https://openjdk.org/</a></li>
+    <li>.NET Foundation. <i>Roslyn, the .NET compiler platform</i>. <a href="https://github.com/dotnet/roslyn" target="_blank" rel="noopener">https://github.com/dotnet/roslyn</a></li>
+    <li>Microsoft. <i>Documentación de C++ y MSVC</i>. <a href="https://learn.microsoft.com/es-es/cpp/" target="_blank" rel="noopener">https://learn.microsoft.com/es-es/cpp/</a></li>
+    <li>Compiler Explorer. <a href="https://godbolt.org/" target="_blank" rel="noopener">https://godbolt.org/</a></li>
+  </ol>
+</section>
+
+</main>
+<footer>Teoría de Autómatas y Compiladores · TI3310-02-2027-1 · UNIBE · Actividad 12</footer>
+
+<script>
+/* ---------- Enrutador por hash ---------- */
+(function(){
+  var ids=['portada','definicion','estructura','codigo','fases','compiladores','laboratorio','referencias'];
+  function show(){
+    var id=(location.hash||'').replace('#','');
+    if(ids.indexOf(id)<0) id='portada';
+    ids.forEach(function(k){
+      var el=document.getElementById(k); if(el) el.classList.toggle('active',k===id);
+    });
+    var links=document.querySelectorAll('nav a');
+    for(var i=0;i<links.length;i++){
+      if(links[i].getAttribute('href')==='#'+id) links[i].setAttribute('aria-current','page');
+      else links[i].removeAttribute('aria-current');
+    }
+    window.scrollTo(0,0);
+  }
+  window.addEventListener('hashchange',show);
+  show();
+})();
+
+/* ---------- Mini compilador ---------- */
+(function(){
+  function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+  function lex(src){
+    var re=/\s*(?:(\d+(?:\.\d+)?)|([A-Za-z_]\w*)|(.))/y, toks=[], m;
+    re.lastIndex=0;
+    while(re.lastIndex<src.length){
+      var start=re.lastIndex;
+      m=re.exec(src);
+      if(!m) break;
+      if(m[1]!==undefined) toks.push({t:'NUM',v:m[1]});
+      else if(m[2]!==undefined) toks.push({t:'ID',v:m[2]});
+      else if(m[3]!==undefined){
+        var c=m[3], map={'+':'MAS','-':'MENOS','*':'POR','/':'DIV','=':'ASIGNA','(':'PAR_IZQ',')':'PAR_DER',';':'PUNTOYCOMA'};
+        toks.push({t:map[c]||'DESCONOCIDO',v:c});
+      }
+      if(re.lastIndex===start) break;
+    }
+    return toks;
+  }
+
+  function compile(toks){
+    var pos=0, code=[], tmp=0;
+    function peek(){return toks[pos];}
+    function fail(msg){throw new Error(msg);}
+    function expect(t){
+      var k=peek();
+      if(!k||k.t!==t) fail('Se esperaba '+t+(k?' pero apareció '+k.t+' ("'+k.v+'")':' pero terminó la entrada'));
+      pos++; return k;
+    }
+    function factor(){
+      var k=peek();
+      if(!k) fail('Expresión incompleta: se esperaba un número, identificador o "("');
+      if(k.t==='NUM'||k.t==='ID'){pos++;return k.v;}
+      if(k.t==='PAR_IZQ'){pos++;var r=expr();expect('PAR_DER');return r;}
+      fail('Token inesperado '+k.t+' ("'+k.v+'"): se esperaba un número, identificador o "("');
+    }
+    function term(){
+      var l=factor();
+      while(peek()&&(peek().t==='POR'||peek().t==='DIV')){
+        var op=peek().v;pos++;var r=factor();var t='t'+(++tmp);
+        code.push({dst:t,a:l,op:op,b:r});l=t;
+      }
+      return l;
+    }
+    function expr(){
+      var l=term();
+      while(peek()&&(peek().t==='MAS'||peek().t==='MENOS')){
+        var op=peek().v;pos++;var r=term();var t='t'+(++tmp);
+        code.push({dst:t,a:l,op:op,b:r});l=t;
+      }
+      return l;
+    }
+    var id=expect('ID').v; expect('ASIGNA');
+    var res=expr();
+    if(peek()&&peek().t==='PUNTOYCOMA') pos++;
+    if(pos<toks.length) fail('Sobran tokens después de la sentencia: '+toks[pos].t+' ("'+toks[pos].v+'")');
+    return {target:id,result:res,code:code};
+  }
+
+  function asm(c){
+    var names={'+':'ADD','-':'SUB','*':'MUL','/':'DIV'}, reg={}, n=0, out=[];
+    function R(t){ if(!reg[t]) reg[t]='R'+(++n); return reg[t]; }
+    function val(x){ return reg[x]||x; }
+    c.code.forEach(function(i){
+      var r=R(i.dst);
+      out.push('MOV  '+r+', '+val(i.a));
+      out.push(names[i.op]+'  '+r+', '+val(i.b));
+    });
+    out.push('MOV  '+c.target+', '+val(c.result));
+    return out.join('\n');
+  }
+
+  function run(){
+    var src=document.getElementById('src').value, box=document.getElementById('labout'), html='';
+    var toks=lex(src);
+    html+='<div class="card"><h3>1. Tokens (análisis léxico)</h3><div class="scroll"><table style="min-width:0"><thead><tr><th>Token</th><th>Lexema</th></tr></thead><tbody>'+
+      toks.map(function(k){return '<tr><td>'+esc(k.t)+'</td><td><code>'+esc(k.v)+'</code></td></tr>';}).join('')+'</tbody></table></div></div>';
+    try{
+      var c=compile(toks);
+      var tac=c.code.map(function(i){return i.dst+' = '+i.a+' '+i.op+' '+i.b;});
+      tac.push(c.target+' = '+c.result);
+      html+='<div class="card"><h3>2. Código de tres direcciones</h3><div class="snippet">'+esc(tac.join('\n'))+'</div><p class="legend">La precedencia y los paréntesis ya quedaron resueltos por el parser.</p></div>';
+      html+='<div class="card"><h3>3. Ensamblador didáctico</h3><div class="snippet">'+esc(asm(c))+'</div><p class="legend">Un registro por temporal. Un compilador real reutiliza registros y optimiza antes de emitir.</p></div>';
+    }catch(e){
+      html+='<div class="card"><h3>Error de compilación</h3><p class="err">'+esc(e.message)+'</p><p class="legend">Así reporta el análisis sintáctico una entrada que no cumple la gramática.</p></div>';
+    }
+    box.innerHTML=html;
+  }
+  document.getElementById('go').addEventListener('click',run);
+  document.getElementById('src').addEventListener('keydown',function(e){if(e.key==='Enter')run();});
+  [['ex1','y = (p + q) * (p - q);'],['ex2','z = 3 * x + 2 * y - 7;'],['ex3','w = a + * 4;']].forEach(function(p){
+    document.getElementById(p[0]).addEventListener('click',function(){document.getElementById('src').value=p[1];run();});
+  });
+  run();
+})();
+</script>
+</body>
+</html>
